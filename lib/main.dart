@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import "transaksi_page.dart";
+// import "transaksi_page.dart";
+import 'pages/dashboard_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +20,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Aplikasi Bendahara',
       theme: ThemeData(primarySwatch: Colors.green),
-      home: const TransaksiPage(),
+      // home: const TransaksiPage(),
+      home: const DashboardPage(),
     );
   }
 }
