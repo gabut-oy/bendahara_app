@@ -30,15 +30,23 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
-  void editTransaksi(Transaksi trx) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => TransaksiFormPage(editTransaksi: trx),
+ void editTransaksi(Transaksi trx) async {
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => TransaksiFormPage(
+        transaksi: trx, // kirim data transaksi yang mau diedit
+        editTransaksi: (updatedTrx) {
+          // Callback setelah transaksi diedit
+          setState(() {
+            // Bisa dipakai untuk refresh UI lokal jika perlu
+          });
+        },
       ),
-    );
-    loadData();
-  }
+    ),
+  );
+  loadData(); // Refresh data dari Supabase
+}
 
   void hapusTransaksi(String id) async {
     await service.hapusTransaksi(id);

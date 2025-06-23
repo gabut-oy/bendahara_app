@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../services/supabase_service.dart';
+import '../models/transaksi_model.dart'; // pastikan ada file ini
 import 'package:intl/intl.dart';
 
 class TransaksiFormPage extends StatefulWidget {
-  const TransaksiFormPage({super.key});
+  final Function(Transaksi)? editTransaksi;
+  final Transaksi? transaksi;
+
+  const TransaksiFormPage({
+    super.key,
+    this.editTransaksi,
+    this.transaksi,
+  });
 
   @override
   State<TransaksiFormPage> createState() => _TransaksiFormPageState();
@@ -26,6 +34,20 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
     'Gaji',
     'Lainnya'
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final transaksi = widget.transaksi;
+    if (transaksi != null) {
+      jumlah = transaksi.jumlah.toString();
+      selectedTipe = transaksi.tipe;
+      selectedKategori = transaksi.kategori;
+      selectedDate = transaksi.tanggal;
+      selectedTime = TimeOfDay.fromDateTime(transaksi.tanggal);
+      catatanCtrl.text = transaksi.catatan ?? '';
+    }
+  }
 
   void tambahAngka(String angka) {
     setState(() {
@@ -73,16 +95,30 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
       selectedTime.minute,
     );
 
+    final data = {
+      'jumlah': int.tryParse(jumlah.replaceAll(',', '')) ?? 0,
+      'tipe': selectedTipe,
+      'kategori': selectedKategori,
+      'tanggal': tanggalWaktu.toIso8601String(),
+      'waktu': DateFormat('HH:mm').format(tanggalWaktu),
+      'catatan': catatanCtrl.text,
+    };
+
     try {
-      await SupabaseService().client.from('transaksi').insert({
-        'id': uuid.v4(),
-        'jumlah': int.tryParse(jumlah.replaceAll(',', '')) ?? 0,
-        'tipe': selectedTipe,
-        'kategori': selectedKategori,
-        'tanggal': tanggalWaktu.toIso8601String(),
-        'waktu': DateFormat('HH:mm').format(tanggalWaktu),
-        'catatan': catatanCtrl.text,
-      });
+      if (widget.transaksi != null) {
+        // MODE EDIT
+        await SupabaseService().client
+            .from('transaksi')
+            .update(data)
+            .eq('id', widget.transaksi!.id);
+        widget.editTransaksi?.call(widget.transaksi!);
+      } else {
+        // MODE TAMBAH
+        await SupabaseService().client.from('transaksi').insert({
+          'id': uuid.v4(),
+          ...data,
+        });
+      }
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,10 +134,11 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text("Tambah Transaksi")),
+      appBar: AppBar(
+        title: Text(widget.transaksi != null ? "Edit Transaksi" : "Tambah Transaksi"),
+      ),
       body: Column(
         children: [
-          // Bagian atas: ikon dan jumlah
           Container(
             color: Colors.blue.shade600,
             padding: const EdgeInsets.all(20),
@@ -124,7 +161,6 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
             ),
           ),
 
-          // Tipe dropdown
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: DropdownButtonFormField<String>(
@@ -145,7 +181,6 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
             ),
           ),
 
-          // Kategori dropdown
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: DropdownButtonFormField<String>(
@@ -166,7 +201,6 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
             ),
           ),
 
-          // Informasi tanggal, waktu, dan catatan
           ListTile(
             leading: const Icon(Icons.calendar_today),
             title: const Text("Tanggal"),
@@ -194,7 +228,6 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
 
           const Spacer(),
 
-          // Keyboard angka custom
           Container(
             color: Colors.grey.shade100,
             padding: const EdgeInsets.all(8),
