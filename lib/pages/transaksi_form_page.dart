@@ -3,7 +3,6 @@ import 'package:uuid/uuid.dart';
 import '../services/supabase_service.dart';
 import 'package:intl/intl.dart';
 
-
 class TransaksiFormPage extends StatefulWidget {
   const TransaksiFormPage({super.key});
 
@@ -16,6 +15,17 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
   DateTime selectedDate = DateTime.now();
   TimeOfDay selectedTime = TimeOfDay.now();
   String jumlah = "";
+  String selectedTipe = 'keluar';
+  String selectedKategori = 'Makan';
+
+  final List<String> tipeOptions = ['masuk', 'keluar'];
+  final List<String> kategoriOptions = [
+    'Makan',
+    'Transportasi',
+    'Belanja',
+    'Gaji',
+    'Lainnya'
+  ];
 
   void tambahAngka(String angka) {
     setState(() {
@@ -53,6 +63,34 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
     }
   }
 
+  Future<void> simpanTransaksi() async {
+    final uuid = Uuid();
+    final tanggalWaktu = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      selectedTime.hour,
+      selectedTime.minute,
+    );
+
+    try {
+      await SupabaseService().client.from('transaksi').insert({
+        'id': uuid.v4(),
+        'jumlah': int.tryParse(jumlah.replaceAll(',', '')) ?? 0,
+        'tipe': selectedTipe,
+        'kategori': selectedKategori,
+        'tanggal': tanggalWaktu.toIso8601String(),
+        'waktu': DateFormat('HH:mm').format(tanggalWaktu),
+        'catatan': catatanCtrl.text,
+      });
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal simpan: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tanggalFormatted = DateFormat('dd MMM yyyy').format(selectedDate);
@@ -83,6 +121,48 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Tipe dropdown
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'Tipe Transaksi',
+                prefixIcon: Icon(Icons.swap_vert),
+              ),
+              value: selectedTipe,
+              items: tipeOptions.map((tipe) {
+                return DropdownMenuItem(
+                  value: tipe,
+                  child: Text(tipe.capitalize()),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) setState(() => selectedTipe = value);
+              },
+            ),
+          ),
+
+          // Kategori dropdown
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'Kategori',
+                prefixIcon: Icon(Icons.category),
+              ),
+              value: selectedKategori,
+              items: kategoriOptions.map((kategori) {
+                return DropdownMenuItem(
+                  value: kategori,
+                  child: Text(kategori),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) setState(() => selectedKategori = value);
+              },
             ),
           ),
 
@@ -158,15 +238,12 @@ class _TransaksiFormPageState extends State<TransaksiFormPage> {
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.check),
-        onPressed: () {
-          // Di sini bisa ditambahkan logika simpan ke Supabase
-          print("Jumlah: $jumlah");
-          print("Tanggal: $tanggalFormatted");
-          print("Waktu: $waktuFormatted");
-          print("Catatan: ${catatanCtrl.text}");
-          Navigator.pop(context);
-        },
+        onPressed: () => simpanTransaksi(),
       ),
     );
   }
+}
+
+extension StringCasingExtension on String {
+  String capitalize() => isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
 }
